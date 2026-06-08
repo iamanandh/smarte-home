@@ -1,0 +1,28 @@
+[2m3:44:26 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mInvalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+[2m3:44:26 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mInvalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+[2m3:44:26 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31m[Unhandled error] [1mTypeError[22m: Cannot read properties of null (reading 'useContext')
+[39m > exports.useContext node_modules/react/cjs/react.development.js:1212:24
+ > useLucideContext node_modules/.vite/deps/lucide-react.js?v=27a75143:99:58
+ > node_modules/.vite/deps/lucide-react.js?v=27a75143:109:199
+ > Object.react_stack_bottom_frame node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:12867:12
+ > renderWithHooks node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:4212:19
+ > updateForwardRef node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:5395:16
+ > beginWork node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:6203:21
+ > runWithFiberInDEV node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:850:66
+ > performUnitOfWork node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:8428:92
+ > workLoopSync node_modules/.vite/deps/react-dom_client.js?v=654fdfc1:8324:37
+
+[2m3:44:26 pm[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mAn error occurred in the <ForwardRef> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+[2m3:45:32 pm[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m[vite] Failed to reload /src/App.css. This could be due to syntax errors or importing non-existent modules. (see errors above)
