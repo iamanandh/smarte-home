@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS sensor_logs (
+  id SERIAL PRIMARY KEY,
+  temperature INTEGER NOT NULL,
+  humidity INTEGER NOT NULL,
+  gas TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS function_logs (
+  id SERIAL PRIMARY KEY,
+  device_id INTEGER NOT NULL,
+  device_name TEXT NOT NULL,
+  function_name TEXT NOT NULL,
+  result TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

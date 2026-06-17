@@ -2,6 +2,13 @@ import cors from 'cors'
 import 'dotenv/config'
 import express from 'express'
 import mqtt from 'mqtt'
+import {
+  addFunctionLog,
+  addSensorLog,
+  getFunctionLogs,
+  getSensorLogs,
+  setupDatabase,
+} from './db.js'
 
 const app = express()
 const PORT = 3002
@@ -38,6 +45,29 @@ let sensorState = {
   humidity: 0,
   gas: 'Waiting',
   lastUpdated: 'Waiting for ESP32',
+}
+
+let databaseStatus = {
+  connected: false,
+  message: 'Database not checked yet',
+}
+
+async function saveSensorLog(sensorPayload) {
+  try {
+    await addSensorLog(sensorPayload)
+    databaseStatus = { connected: true, message: 'Sensor log saved' }
+  } catch (error) {
+    databaseStatus = { connected: false, message: error.message }
+  }
+}
+
+async function saveFunctionLog(logDetails) {
+  try {
+    await addFunctionLog(logDetails)
+    databaseStatus = { connected: true, message: 'Function log saved' }
+  } catch (error) {
+    databaseStatus = { connected: false, message: error.message }
+  }
 }
 
 const mqttClient = mqtt.connect(MQTT_BROKER_URL, {
@@ -90,6 +120,7 @@ mqttClient.on('message', (topic, payloadBuffer) => {
           second: '2-digit',
         }),
       }
+      saveSensorLog(sensorPayload)
     } catch {
       sensorState = {
         ...sensorState,
@@ -166,11 +197,19 @@ app.put('/api/devices/:id/toggle', async (req, res) => {
   }
 
   device.isOn = !device.isOn
+  const logDetails = {
+    deviceId: device.id,
+    deviceName: device.name,
+    functionName: 'toggleDevice',
+    result: device.isOn ? 'ON' : 'OFF',
+  }
 
   try {
     await publishDeviceCommand(device)
+    await saveFunctionLog(logDetails)
     res.json({ message: 'Device updated and MQTT command sent', device, mqttStatus })
   } catch (error) {
+    await saveFunctionLog({ ...logDetails, result: `MQTT failed: ${error.message}` })
     res.status(503).json({
       message: 'Device changed in dashboard, but MQTT command was not sent',
       device,
@@ -192,6 +231,43 @@ app.get('/api/mqtt/status', (req, res) => {
   res.json({ mqttStatus })
 })
 
-app.listen(PORT, () => {
-  console.log(`Smart home backend running on http://localhost:${PORT}`)
+app.get('/api/logs/sensors', async (req, res) => {
+  try {
+    const logs = await getSensorLogs()
+    res.json({ logs, databaseStatus })
+  } catch (error) {
+    res.status(500).json({ message: error.message, databaseStatus })
+  }
 })
+
+app.get('/api/logs/functions', async (req, res) => {
+  try {
+    const logs = await getFunctionLogs()
+    res.json({ logs, databaseStatus })
+  } catch (error) {
+    res.status(500).json({ message: error.message, databaseStatus })
+  }
+})
+
+app.get('/api/database/status', (req, res) => {
+  res.json({ databaseStatus })
+})
+
+setupDatabase()
+  .then(() => {
+    databaseStatus = {
+      connected: true,
+      message: 'Database tables are ready',
+    }
+  })
+  .catch((error) => {
+    databaseStatus = {
+      connected: false,
+      message: error.message,
+    }
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Smart home backend running on http://localhost:${PORT}`)
+    })
+  })
