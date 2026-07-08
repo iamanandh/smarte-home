@@ -1,8 +1,8 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-const char* WIFI_SSID = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID = "Yuvabe";
+const char* WIFI_PASSWORD = "Yuv@be_2022";
 
 const char* MQTT_SERVER = "test.mosquitto.org";
 const int MQTT_PORT = 1883;
@@ -41,7 +41,11 @@ void setDeviceState(int deviceId, bool isOn) {
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   char message[8];
-  unsigned int copyLength = min(length, sizeof(message) - 1);
+  unsigned int copyLength = length;
+
+if (copyLength > sizeof(message) - 1) {
+  copyLength = sizeof(message) - 1;
+}
 
   memcpy(message, payload, copyLength);
   message[copyLength] = '\0';

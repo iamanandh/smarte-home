@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.platformio/
+.pio/
+**/.pio/
 
 # Editor directories and files
 .vscode/*
