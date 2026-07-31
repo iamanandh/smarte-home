@@ -1,14 +1,17 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 
 const char* WIFI_SSID = "Yuvabe";
 const char* WIFI_PASSWORD = "Yuv@be_2022";
 
-const char* MQTT_SERVER = "192.168.68.150";
-const int MQTT_PORT = 1883;
+const char* MQTT_SERVER = "YOUR_SECURE_MQTT_HOST";
+const int MQTT_PORT = 8883;
+const char* MQTT_USERNAME = "YOUR_MQTT_USERNAME";
+const char* MQTT_PASSWORD = "YOUR_MQTT_PASSWORD";
 const char* BASE_TOPIC = "smart-home-esp32";
 
-WiFiClient wifiClient;
+WiFiClientSecure wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 const int DEVICE_1_PIN = 11; // Purple wire -> IN1
@@ -110,7 +113,7 @@ void connectMqtt() {
 
     Serial.print("Connecting to MQTT...");
 
-    if (mqttClient.connect(clientId)) {
+    if (mqttClient.connect(clientId, MQTT_USERNAME, MQTT_PASSWORD)) {
       Serial.println("connected");
       mqttClient.subscribe("smart-home-esp32/device/+/set");
       Serial.println("Subscribed to device control topic");
@@ -204,6 +207,7 @@ void setup() {
   if (DEVICE_6_PIN != -1) digitalWrite(DEVICE_6_PIN, HIGH);
 
   connectWifi();
+  wifiClient.setInsecure();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
 

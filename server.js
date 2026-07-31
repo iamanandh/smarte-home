@@ -13,36 +13,41 @@ import {
 } from './db.js'
 
 const app = express()
-const PORT = 3002
+const PORT = Number(process.env.PORT || 3002)
 const MQTT_SERVER_PORT = Number(process.env.MQTT_SERVER_PORT || 1883)
 const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || `mqtt://127.0.0.1:${MQTT_SERVER_PORT}`
 const MQTT_BASE_TOPIC = process.env.MQTT_BASE_TOPIC || 'smart-home-esp32'
+const MQTT_USERNAME = process.env.MQTT_USERNAME
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD
+const LOCAL_MQTT_BROKER_ENABLED = process.env.LOCAL_MQTT_BROKER_ENABLED !== 'false'
 
 app.use(cors())
 app.use(express.json())
 
-const localBroker = await Aedes.createBroker()
-const mqttServer = net.createServer(localBroker.handle)
+if (LOCAL_MQTT_BROKER_ENABLED) {
+  const localBroker = await Aedes.createBroker()
+  const mqttServer = net.createServer(localBroker.handle)
 
-localBroker.on('client', (client) => {
-  console.log(`MQTT client connected: ${client.id}`)
-})
+  localBroker.on('client', (client) => {
+    console.log(`MQTT client connected: ${client.id}`)
+  })
 
-localBroker.on('clientDisconnect', (client) => {
-  console.log(`MQTT client disconnected: ${client.id}`)
-})
+  localBroker.on('clientDisconnect', (client) => {
+    console.log(`MQTT client disconnected: ${client.id}`)
+  })
 
-localBroker.on('clientError', (client, error) => {
-  console.log(`MQTT client error ${client?.id || 'unknown'}: ${error.message}`)
-})
+  localBroker.on('clientError', (client, error) => {
+    console.log(`MQTT client error ${client?.id || 'unknown'}: ${error.message}`)
+  })
 
-localBroker.on('connectionError', (client, error) => {
-  console.log(`MQTT connection error ${client?.id || 'unknown'}: ${error.message}`)
-})
+  localBroker.on('connectionError', (client, error) => {
+    console.log(`MQTT connection error ${client?.id || 'unknown'}: ${error.message}`)
+  })
 
-mqttServer.listen(MQTT_SERVER_PORT, '0.0.0.0', () => {
-  console.log(`Local MQTT broker running on mqtt://0.0.0.0:${MQTT_SERVER_PORT}`)
-})
+  mqttServer.listen(MQTT_SERVER_PORT, '0.0.0.0', () => {
+    console.log(`Local MQTT broker running on mqtt://0.0.0.0:${MQTT_SERVER_PORT}`)
+  })
+}
 
 const demoUser = {
   email: 'admin@smarthome.com',
@@ -115,6 +120,8 @@ async function saveFunctionLog(logDetails) {
 
 const mqttClient = mqtt.connect(MQTT_BROKER_URL, {
   reconnectPeriod: 3000,
+  username: MQTT_USERNAME,
+  password: MQTT_PASSWORD,
 })
 
 mqttClient.on('connect', () => {
@@ -379,7 +386,7 @@ setupDatabase()
     }
   })
   .finally(() => {
-    app.listen(PORT, () => {
-      console.log(`Smart home backend running on http://localhost:${PORT}`)
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Smart home backend running on port ${PORT}`)
     })
   })
