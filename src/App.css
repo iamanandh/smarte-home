@@ -264,6 +264,22 @@ button:hover {
   background: #1d4ed8;
 }
 
+.all-on-button {
+  background: #2563eb;
+}
+
+.all-on-button:hover {
+  background: #1d4ed8;
+}
+
+.all-off-button {
+  background: #dc2626;
+}
+
+.all-off-button:hover {
+  background: #b91c1c;
+}
+
 .spinning {
   animation: spin 0.8s linear infinite;
 }
@@ -299,8 +315,18 @@ button:hover {
   box-shadow: 0 0 0 5px rgba(249, 115, 22, 0.16);
 }
 
-.mqtt-online {
+.mqtt-online,
+.esp32-online {
   color: #14532d;
+}
+
+.esp32-offline {
+  color: #7f1d1d;
+}
+
+.esp32-offline .online-dot {
+  background: #ef4444;
+  box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.16);
 }
 
 .dashboard-error {

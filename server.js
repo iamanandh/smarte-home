@@ -1,7 +1,9 @@
 import cors from 'cors'
 import 'dotenv/config'
+import { Aedes } from 'aedes'
 import express from 'express'
 import mqtt from 'mqtt'
+import net from 'net'
 import {
   addFunctionLog,
   addSensorLog,
@@ -12,11 +14,35 @@ import {
 
 const app = express()
 const PORT = 3002
-const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || 'mqtt://test.mosquitto.org:1883'
+const MQTT_SERVER_PORT = Number(process.env.MQTT_SERVER_PORT || 1883)
+const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || `mqtt://127.0.0.1:${MQTT_SERVER_PORT}`
 const MQTT_BASE_TOPIC = process.env.MQTT_BASE_TOPIC || 'smart-home-esp32'
 
 app.use(cors())
 app.use(express.json())
+
+const localBroker = await Aedes.createBroker()
+const mqttServer = net.createServer(localBroker.handle)
+
+localBroker.on('client', (client) => {
+  console.log(`MQTT client connected: ${client.id}`)
+})
+
+localBroker.on('clientDisconnect', (client) => {
+  console.log(`MQTT client disconnected: ${client.id}`)
+})
+
+localBroker.on('clientError', (client, error) => {
+  console.log(`MQTT client error ${client?.id || 'unknown'}: ${error.message}`)
+})
+
+localBroker.on('connectionError', (client, error) => {
+  console.log(`MQTT connection error ${client?.id || 'unknown'}: ${error.message}`)
+})
+
+mqttServer.listen(MQTT_SERVER_PORT, '0.0.0.0', () => {
+  console.log(`Local MQTT broker running on mqtt://0.0.0.0:${MQTT_SERVER_PORT}`)
+})
 
 const demoUser = {
   email: 'admin@smarthome.com',
@@ -25,12 +51,11 @@ const demoUser = {
 }
 
 const devices = [
-  { id: 1, name: 'Living Room Light', room: 'Living Room', type: 'light', pin: 18, isOn: false },
-  { id: 2, name: 'Bedroom Fan', room: 'Bedroom', type: 'fan', pin: 19, isOn: false },
-  { id: 3, name: 'Main Door Lock', room: 'Entrance', type: 'lock', pin: 21, isOn: false },
-  { id: 4, name: 'Kitchen Light', room: 'Kitchen', type: 'light', pin: 22, isOn: false },
-  { id: 5, name: 'Garden Pump', room: 'Outdoor', type: 'pump', pin: 23, isOn: false },
-  { id: 6, name: 'Porch Camera', room: 'Entrance', type: 'camera', pin: 5, isOn: false },
+  { id: 1, name: 'Kitchen Light', room: 'Kitchen', type: 'light', pin: 11, isOn: false },
+  { id: 2, name: 'Living Room Light', room: 'Living Room', type: 'light', pin: 12, isOn: false },
+  { id: 3, name: 'Bedroom Light', room: 'Bedroom', type: 'light', pin: 10, isOn: false },
+  { id: 4, name: 'Buzzer', room: 'Security', type: 'buzzer', pin: 16, isOn: false },
+  { id: 5, name: 'Fan', room: 'Living Room', type: 'fan', pin: 36, isOn: false },
 ]
 
 let mqttStatus = {
@@ -47,9 +72,27 @@ let sensorState = {
   lastUpdated: 'Waiting for ESP32',
 }
 
+let lastEsp32SeenAt = null
+
 let databaseStatus = {
   connected: false,
   message: 'Database not checked yet',
+}
+
+function getEsp32Status() {
+  if (!lastEsp32SeenAt) {
+    return {
+      connected: false,
+      lastSeen: 'Waiting for ESP32',
+    }
+  }
+
+  const secondsSinceLastSeen = Math.round((Date.now() - lastEsp32SeenAt) / 1000)
+
+  return {
+    connected: secondsSinceLastSeen <= 15,
+    lastSeen: `${secondsSinceLastSeen}s ago`,
+  }
 }
 
 async function saveSensorLog(sensorPayload) {
@@ -120,6 +163,7 @@ mqttClient.on('message', (topic, payloadBuffer) => {
           second: '2-digit',
         }),
       }
+      lastEsp32SeenAt = Date.now()
       saveSensorLog(sensorPayload)
     } catch {
       sensorState = {
@@ -221,6 +265,74 @@ app.put('/api/devices/:id/toggle', async (req, res) => {
   }
 })
 
+app.put('/api/devices/all/on', async (req, res) => {
+  if (!mqttClient.connected) {
+    return res.status(503).json({
+      message: 'MQTT broker is not connected',
+      devices,
+      mqttStatus,
+    })
+  }
+
+  try {
+    for (const device of devices) {
+      device.isOn = true
+      await publishDeviceCommand(device)
+      await saveFunctionLog({
+        deviceId: device.id,
+        deviceName: device.name,
+        functionName: 'turnAllOn',
+        result: 'ON',
+      })
+    }
+
+    res.json({ message: 'All devices turned on', devices, mqttStatus })
+  } catch (error) {
+    res.status(503).json({
+      message: `Some devices may not be updated: ${error.message}`,
+      devices,
+      mqttStatus: {
+        ...mqttStatus,
+        lastMessage: error.message,
+      },
+    })
+  }
+})
+
+app.put('/api/devices/all/off', async (req, res) => {
+  if (!mqttClient.connected) {
+    return res.status(503).json({
+      message: 'MQTT broker is not connected',
+      devices,
+      mqttStatus,
+    })
+  }
+
+  try {
+    for (const device of devices) {
+      device.isOn = false
+      await publishDeviceCommand(device)
+      await saveFunctionLog({
+        deviceId: device.id,
+        deviceName: device.name,
+        functionName: 'turnAllOff',
+        result: 'OFF',
+      })
+    }
+
+    res.json({ message: 'All devices turned off', devices, mqttStatus })
+  } catch (error) {
+    res.status(503).json({
+      message: `Some devices may not be updated: ${error.message}`,
+      devices,
+      mqttStatus: {
+        ...mqttStatus,
+        lastMessage: error.message,
+      },
+    })
+  }
+})
+
 app.get('/api/sensors', (req, res) => {
   res.json({
     sensors: sensorState,
@@ -228,7 +340,7 @@ app.get('/api/sensors', (req, res) => {
 })
 
 app.get('/api/mqtt/status', (req, res) => {
-  res.json({ mqttStatus })
+  res.json({ mqttStatus, esp32Status: getEsp32Status() })
 })
 
 app.get('/api/logs/sensors', async (req, res) => {

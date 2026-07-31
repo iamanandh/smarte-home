@@ -3,14 +3,12 @@ import {
   Bell,
   Camera,
   Fan,
-  Gauge,
   Home,
   Lightbulb,
   Lock,
   LogIn,
   LogOut,
   Power,
-  RefreshCw,
   ShieldCheck,
   ThermometerSun,
   Waves,
@@ -25,15 +23,16 @@ function App() {
   const [devices, setDevices] = useState([])
   const [sensors, setSensors] = useState(null)
   const [mqttStatus, setMqttStatus] = useState(null)
+  const [esp32Status, setEsp32Status] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     if (!user) return
 
     loadDashboard()
     const timerId = setInterval(() => {
+      loadDevices()
       loadSensors()
       loadMqttStatus()
     }, 5000)
@@ -45,13 +44,23 @@ function App() {
     await Promise.all([loadDevices(), loadSensors(), loadMqttStatus()])
   }
 
+  function logoutAfterBackendDisconnect() {
+    setUser(null)
+    setDevices([])
+    setSensors(null)
+    setMqttStatus(null)
+    setEsp32Status(null)
+    setMessage('')
+    setError('Backend server disconnected. Please start the server and login again.')
+  }
+
   async function loadDevices() {
     try {
       const response = await fetch(`${API_URL}/api/devices`)
       const data = await response.json()
       setDevices(data.devices)
     } catch {
-      setError('Backend is not connected. Start the server first.')
+      logoutAfterBackendDisconnect()
     }
   }
 
@@ -61,7 +70,7 @@ function App() {
       const data = await response.json()
       setSensors(data.sensors)
     } catch {
-      setError('Sensor API is not connected.')
+      logoutAfterBackendDisconnect()
     }
   }
 
@@ -70,8 +79,9 @@ function App() {
       const response = await fetch(`${API_URL}/api/mqtt/status`)
       const data = await response.json()
       setMqttStatus(data.mqttStatus)
+      setEsp32Status(data.esp32Status)
     } catch {
-      setError('MQTT status API is not connected.')
+      logoutAfterBackendDisconnect()
     }
   }
 
@@ -127,18 +137,58 @@ function App() {
           device.id === id ? data.device : device,
         ),
       )
+      await loadDashboard()
     } catch {
-      setError('Cannot update device.')
+      logoutAfterBackendDisconnect()
     }
   }
 
-  async function refreshDashboard() {
-    setIsRefreshing(true)
-    await loadDashboard()
-    setIsRefreshing(false)
+  async function turnAllOn() {
+    try {
+      const response = await fetch(`${API_URL}/api/devices/all/on`, {
+        method: 'PUT',
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.message)
+        setMqttStatus(data.mqttStatus)
+        return
+      }
+
+      setError('')
+      setDevices(data.devices)
+      setMqttStatus(data.mqttStatus)
+      await loadDashboard()
+    } catch {
+      logoutAfterBackendDisconnect()
+    }
+  }
+
+  async function turnAllOff() {
+    try {
+      const response = await fetch(`${API_URL}/api/devices/all/off`, {
+        method: 'PUT',
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.message)
+        setMqttStatus(data.mqttStatus)
+        return
+      }
+
+      setError('')
+      setDevices(data.devices)
+      setMqttStatus(data.mqttStatus)
+      await loadDashboard()
+    } catch {
+      logoutAfterBackendDisconnect()
+    }
   }
 
   function getDeviceIcon(type) {
+    if (type === 'buzzer') return <Bell />
     if (type === 'fan') return <Fan />
     if (type === 'lock') return <Lock />
     if (type === 'camera') return <Camera />
@@ -230,14 +280,6 @@ function App() {
             <Home />
             Overview
           </button>
-          <button className="nav-button">
-            <Lightbulb />
-            Devices
-          </button>
-          <button className="nav-button">
-            <Gauge />
-            Sensors
-          </button>
         </nav>
 
         <button className="logout-button" onClick={() => setUser(null)}>
@@ -253,9 +295,13 @@ function App() {
             <h1>Home control center</h1>
           </div>
           <div className="header-actions">
-            <button className="refresh-button" onClick={refreshDashboard}>
-              <RefreshCw className={isRefreshing ? 'spinning' : ''} />
-              Refresh
+            <button className="all-on-button" onClick={turnAllOn}>
+              <Power />
+              Turn All On
+            </button>
+            <button className="all-off-button" onClick={turnAllOff}>
+              <Power />
+              Turn All Off
             </button>
             <div className="connection-card">
               <span className="online-dot"></span>
@@ -271,6 +317,16 @@ function App() {
               <span className="online-dot"></span>
               MQTT {mqttStatus?.connected ? 'online' : 'offline'}
             </div>
+            <div
+              className={
+                esp32Status?.connected
+                  ? 'connection-card esp32-online'
+                  : 'connection-card esp32-offline'
+              }
+            >
+              <span className="online-dot"></span>
+              ESP32 {esp32Status?.connected ? 'online' : 'offline'}
+            </div>
           </div>
         </header>
 
@@ -284,7 +340,7 @@ function App() {
             <p>Running now</p>
           </div>
           <div>
-            <span>{mqttStatus?.connected ? 'MQTT' : 'Wait'}</span>
+            <span>{esp32Status?.connected ? 'Live' : 'Wait'}</span>
             <p>ESP32 bridge</p>
           </div>
         </section>
@@ -340,6 +396,9 @@ function App() {
           </div>
           <p className="last-updated">
             Last updated: {sensors ? sensors.lastUpdated : 'Waiting...'}
+          </p>
+          <p className="last-updated">
+            ESP32 last seen: {esp32Status ? esp32Status.lastSeen : 'Waiting...'}
           </p>
           <p className="last-updated">
             MQTT message: {mqttStatus ? mqttStatus.lastMessage : 'Waiting...'}
