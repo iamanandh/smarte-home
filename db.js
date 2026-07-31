@@ -1,9 +1,12 @@
 import pg from 'pg'
 
 const { Pool } = pg
+const databaseUrl = process.env.DATABASE_URL
+const needsSsl = databaseUrl?.includes('neon.tech') || databaseUrl?.includes('sslmode=require')
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
+  ssl: needsSsl ? { rejectUnauthorized: false } : false,
 })
 
 function checkDatabaseUrl() {
