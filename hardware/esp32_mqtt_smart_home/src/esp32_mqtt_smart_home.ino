@@ -117,8 +117,11 @@ void connectMqtt() {
     if (mqttClient.connect(clientId, MQTT_USERNAME, MQTT_PASSWORD)) {
       Serial.println("connected");
       char commandTopic[64];
+      char statusTopic[64];
       snprintf(commandTopic, sizeof(commandTopic), "%s/device/+/set", BASE_TOPIC);
+      snprintf(statusTopic, sizeof(statusTopic), "%s/status", BASE_TOPIC);
       mqttClient.subscribe(commandTopic);
+      mqttClient.publish(statusTopic, "online", true);
       Serial.println("Subscribed to device control topic");
       publishCurrentSwitchStates();
     } else {
@@ -146,9 +149,11 @@ void publishSensors() {
 
   char sensorTopic[64];
   snprintf(sensorTopic, sizeof(sensorTopic), "%s/sensors", BASE_TOPIC);
-  mqttClient.publish(sensorTopic, payload);
+  bool published = mqttClient.publish(sensorTopic, payload);
   Serial.print("Published sensors: ");
   Serial.println(payload);
+  Serial.print("Sensor publish ");
+  Serial.println(published ? "OK" : "FAILED");
 }
 
 bool readSwitchOn(int pin) {
