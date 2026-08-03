@@ -5,10 +5,10 @@
 const char* WIFI_SSID = "Yuvabe";
 const char* WIFI_PASSWORD = "Yuv@be_2022";
 
-const char* MQTT_SERVER = "YOUR_SECURE_MQTT_HOST";
+const char* MQTT_SERVER = "855ba1d761b246e69c9758865abefd52.s1.eu.hivemq.cloud:8883";
 const int MQTT_PORT = 8883;
-const char* MQTT_USERNAME = "YOUR_MQTT_USERNAME";
-const char* MQTT_PASSWORD = "YOUR_MQTT_PASSWORD";
+const char* MQTT_USERNAME = "smart_home";
+const char* MQTT_PASSWORD = "Anandh@23";
 const char* BASE_TOPIC = "smart-home-esp32";
 
 WiFiClientSecure wifiClient;

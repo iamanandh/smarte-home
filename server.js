@@ -19,7 +19,9 @@ const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || `mqtt://127.0.0.1:${MQTT_
 const MQTT_BASE_TOPIC = process.env.MQTT_BASE_TOPIC || 'smart-home-esp32'
 const MQTT_USERNAME = process.env.MQTT_USERNAME
 const MQTT_PASSWORD = process.env.MQTT_PASSWORD
-const LOCAL_MQTT_BROKER_ENABLED = process.env.LOCAL_MQTT_BROKER_ENABLED !== 'false'
+const LOCAL_MQTT_BROKER_ENABLED = process.env.LOCAL_MQTT_BROKER_ENABLED
+  ? process.env.LOCAL_MQTT_BROKER_ENABLED === 'true'
+  : MQTT_BROKER_URL.includes('127.0.0.1') || MQTT_BROKER_URL.includes('localhost')
 
 app.use(cors())
 app.use(express.json())
