@@ -134,6 +134,7 @@ mqttClient.on('connect', () => {
   }
   mqttClient.subscribe(`${MQTT_BASE_TOPIC}/sensors`)
   mqttClient.subscribe(`${MQTT_BASE_TOPIC}/device/+/state`)
+  mqttClient.subscribe(`${MQTT_BASE_TOPIC}/#`)
 })
 
 mqttClient.on('reconnect', () => {
@@ -157,6 +158,10 @@ mqttClient.on('message', (topic, payloadBuffer) => {
   mqttStatus = {
     ...mqttStatus,
     lastMessage: `${topic}: ${payload}`,
+  }
+
+  if (topic.startsWith(`${MQTT_BASE_TOPIC}/`)) {
+    lastEsp32SeenAt = Date.now()
   }
 
   if (topic === `${MQTT_BASE_TOPIC}/sensors`) {

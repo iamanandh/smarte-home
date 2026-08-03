@@ -5,7 +5,7 @@
 const char* WIFI_SSID = "Yuvabe";
 const char* WIFI_PASSWORD = "Yuv@be_2022";
 
-const char* MQTT_SERVER = "855ba1d761b246e69c9758865abefd52.s1.eu.hivemq.cloud:8883";
+const char* MQTT_SERVER = "855ba1d761b246e69c9758865abefd52.s1.eu.hivemq.cloud";
 const int MQTT_PORT = 8883;
 const char* MQTT_USERNAME = "smart_home";
 const char* MQTT_PASSWORD = "Anandh@23";
@@ -109,13 +109,16 @@ void connectWifi() {
 
 void connectMqtt() {
   while (!mqttClient.connected()) {
-    const char* clientId = "esp32-home";
+    char clientId[32];
+    snprintf(clientId, sizeof(clientId), "esp32-home-%08X", (uint32_t)ESP.getEfuseMac());
 
     Serial.print("Connecting to MQTT...");
 
     if (mqttClient.connect(clientId, MQTT_USERNAME, MQTT_PASSWORD)) {
       Serial.println("connected");
-      mqttClient.subscribe("smart-home-esp32/device/+/set");
+      char commandTopic[64];
+      snprintf(commandTopic, sizeof(commandTopic), "%s/device/+/set", BASE_TOPIC);
+      mqttClient.subscribe(commandTopic);
       Serial.println("Subscribed to device control topic");
       publishCurrentSwitchStates();
     } else {
@@ -141,7 +144,9 @@ void publishSensors() {
     gas
   );
 
-  mqttClient.publish("smart-home-esp32/sensors", payload);
+  char sensorTopic[64];
+  snprintf(sensorTopic, sizeof(sensorTopic), "%s/sensors", BASE_TOPIC);
+  mqttClient.publish(sensorTopic, payload);
   Serial.print("Published sensors: ");
   Serial.println(payload);
 }
@@ -210,6 +215,8 @@ void setup() {
   wifiClient.setInsecure();
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setKeepAlive(60);
+  mqttClient.setSocketTimeout(30);
 
   lastSwitch1On = readSwitchOn(SWITCH_1_PIN);
   lastSwitch2On = readSwitchOn(SWITCH_2_PIN);
