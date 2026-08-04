@@ -102,6 +102,21 @@ function getEsp32Status() {
   }
 }
 
+function requireEsp32Online(res) {
+  const esp32Status = getEsp32Status()
+
+  if (!esp32Status.connected) {
+    res.status(503).json({
+      message: 'ESP32 is offline. Command was not sent.',
+      esp32Status,
+      mqttStatus,
+    })
+    return false
+  }
+
+  return true
+}
+
 async function saveSensorLog(sensorPayload) {
   try {
     await addSensorLog(sensorPayload)
@@ -254,6 +269,10 @@ app.put('/api/devices/:id/toggle', async (req, res) => {
     return res.status(404).json({ message: 'Device not found' })
   }
 
+  if (!requireEsp32Online(res)) {
+    return
+  }
+
   device.isOn = !device.isOn
   const logDetails = {
     deviceId: device.id,
@@ -280,6 +299,10 @@ app.put('/api/devices/:id/toggle', async (req, res) => {
 })
 
 app.put('/api/devices/all/on', async (req, res) => {
+  if (!requireEsp32Online(res)) {
+    return
+  }
+
   if (!mqttClient.connected) {
     return res.status(503).json({
       message: 'MQTT broker is not connected',
@@ -314,6 +337,10 @@ app.put('/api/devices/all/on', async (req, res) => {
 })
 
 app.put('/api/devices/all/off', async (req, res) => {
+  if (!requireEsp32Online(res)) {
+    return
+  }
+
   if (!mqttClient.connected) {
     return res.status(503).json({
       message: 'MQTT broker is not connected',
