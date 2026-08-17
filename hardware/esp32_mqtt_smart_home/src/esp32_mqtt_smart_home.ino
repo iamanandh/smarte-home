@@ -1,5 +1,7 @@
 #include <WiFi.h>
+#if __has_include(<WiFiClientSecure.h>)
 #include <WiFiClientSecure.h>
+#endif
 #include <PubSubClient.h>
 
 const char* WIFI_SSID = "Yuvabe";

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '')
+const API_URL = import.meta.env.VITE_API_URL || 'https://smarte-home.onrender.com'
 
 function App() {
   const [user, setUser] = useState(null)
